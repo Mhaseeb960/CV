@@ -14,45 +14,69 @@ st.set_page_config(page_title="Disease Detection Suite", layout="centered")
 st.sidebar.title("🧭 Navigation")
 page = st.sidebar.selectbox("Choose a detector", ["Ginger Disease Detector", "OCT Eye Disease Detector"])
 
-# ---------------------------
-# Ginger Disease Detector
-# ---------------------------
-if page == "Ginger Disease Detector":
-    st.title("🌿 Ginger Disease Detector – MobileNet")
 
-    # Load Ginger model
-    @st.cache_resource
-    def load_ginger_model():
-        return load_model("ginger_disease_model.keras")
+# ---------------------------------------------------------------------------
+# Streamlit App
+# ---------------------------------------------------------------------------
+st.title("🍇🍉 Fruit Disease Detector")
 
-    ginger_model = load_ginger_model()
-    ginger_class_labels = ['Bacterial_wilt', 'Healthy']
-    ginger_img_size = (224, 224)
+# ------------------------------------------------------------------------------
+# Loading Model
+# ------------------------------------------------------------------------------
+@st.cache_resource
+def load_fruit_model():
+    return load_model("my_fruit_classifier.keras")  # Update to your model's path
 
-    def predict_ginger(image_path):
-        img = load_img(image_path, target_size=ginger_img_size)
-        img_array = img_to_array(img) / 255.0
-        img_array = np.expand_dims(img_array, axis=0)
-        prediction = ginger_model.predict(img_array)[0][0]
-        label = ginger_class_labels[1] if prediction >= 0.5 else ginger_class_labels[0]
-        confidence = prediction if prediction >= 0.5 else 1 - prediction
-        return label, confidence
 
-    uploaded_file = st.file_uploader("Upload a ginger leaf image", type=["jpg", "jpeg", "png"])
+model = load_fruit_model()
 
-    if uploaded_file:
-        with tempfile.NamedTemporaryFile(delete=False) as tmp:
-            tmp.write(uploaded_file.read())
-            temp_path = tmp.name
+# ------------------------------------------------------------------------------
+# Define class_labels matching your training data
+# ------------------------------------------------------------------------------
+class_labels = ['apple', 'banana', 'cherry', 'chickoo', 'grapes', 'kiwi', 'mango', 'orange', 'strawberry']
 
-        st.image(temp_path, caption="Uploaded Image", use_container_width=True)
+# ------------------------------------------------------------------------------
+# Image Size for Model Input
+# ------------------------------------------------------------------------------
+img_size = (224, 224)
 
-        with st.spinner("Analyzing..."):
-            label, confidence = predict_ginger(temp_path)
-            st.success(f"Prediction: **{label}**")
-            st.info(f"Confidence: **{confidence:.2f}**")
+# ------------------------------------------------------------------------------
+# Prediction function
+# ------------------------------------------------------------------------------
+def predict_fruit(image_path):
+    # Prepare the image for the classifier
+    img = load_img(image_path, target_size=img_size)
+    img_array = img_to_array(img) / 255.0
+    img_array = np.expand_dims(img_array, axis=0)
+    predictions = model.predict(img_array)[0]
 
-        os.remove(temp_path)
+    # Determine the predicted class and confidence
+    max_index = np.argmax(predictions)
+    label = class_labels[max_index]
+    confidence = predictions[max_index]
+
+    return label, confidence
+
+
+# ------------------------------------------------------------------------------
+# File upload and prediction
+# ------------------------------------------------------------------------------
+uploaded_file = st.file_uploader("Upload a fruit image", type=["jpg", "jpeg", "png"])
+
+if uploaded_file is not None:
+    with tempfile.NamedTemporaryFile(delete=False) as tmp:
+        tmp.write(uploaded_file.read())  # save the upload temporarily
+        temp_path = tmp.name
+
+    st.image(temp_path, caption='Uploaded Image', use_container_width=True)
+
+    with st.spinner("Analyzing..."):
+        label, confidence = predict_fruit(temp_path)
+        st.success(f"Predicted label: **{label}**")
+        st.info(f"Confidence: **{confidence:.2f}**")
+
+    # Remove the temporary file after usage
+    os.remove(temp_path)
 
 # ---------------------------
 # OCT Eye Disease Detector
